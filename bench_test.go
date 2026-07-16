@@ -32,6 +32,16 @@ func BenchmarkDeepEqualSlice(b *testing.B) {
 	}
 }
 
+func BenchmarkCmpEqualSlice(b *testing.B) {
+	tb := nopTB{}
+	got := []int{1, 2, 3, 4, 5}
+	want := []int{1, 2, 3, 4, 5}
+	b.ReportAllocs()
+	for b.Loop() {
+		ok.CmpEqual(tb, got, want)
+	}
+}
+
 func BenchmarkDeepEqualMap(b *testing.B) {
 	tb := nopTB{}
 	got := map[string]int{"a": 1, "b": 2}

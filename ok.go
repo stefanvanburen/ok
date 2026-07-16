@@ -18,6 +18,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 // TB is the subset of [testing.TB] used by this package.
@@ -29,6 +31,10 @@ type TB interface {
 }
 
 // Equal asserts that got == want.
+//
+// Note that on pointer types == asserts identity, not value equality: two
+// distinct pointers to equal values are not ==. Use [DeepEqual], [CmpEqual],
+// or [EqualFunc] to compare what pointers point at.
 func Equal[T comparable](tb TB, got, want T) bool {
 	tb.Helper()
 	if got == want {
@@ -57,6 +63,23 @@ func DeepEqual[T any](tb TB, got, want T) bool {
 		return true
 	}
 	tb.Errorf("not deeply equal:\n%s", diff(tb, got, want))
+	return false
+}
+
+// CmpEqual asserts that got and want are equal using
+// [github.com/google/go-cmp/cmp.Equal] with opts, e.g. protocmp.Transform
+// for protobuf messages. Unlike the other assertions, it pays cmp's
+// reflection cost even when the assertion passes.
+//
+// cmp panics when opts don't cover a type it can't otherwise compare (e.g.
+// a struct with unexported fields); CmpEqual lets that panic propagate, as
+// cmp's message names the missing option.
+func CmpEqual[T any](tb TB, got, want T, opts ...cmp.Option) bool {
+	tb.Helper()
+	if cmp.Equal(got, want, opts...) {
+		return true
+	}
+	tb.Errorf("not equal:\n%s", diff(tb, got, want, opts...))
 	return false
 }
 

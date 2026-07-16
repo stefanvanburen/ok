@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stefanvanburen/ok"
 )
 
@@ -137,6 +138,48 @@ func TestDeepEqualEmptyDiff(t *testing.T) {
 		t.Error("DeepEqual returned true for unequal values")
 	}
 	checkFail(t, r, "not deeply equal", "got:")
+}
+
+func TestCmpEqual(t *testing.T) {
+	t.Parallel()
+	r := &recorderTB{}
+	if !ok.CmpEqual(r, []int{1, 2}, []int{1, 2}) {
+		t.Error("CmpEqual returned false for equal slices")
+	}
+	checkPass(t, r)
+
+	// An option changes the meaning of equality: unordered slices compare
+	// equal under SortSlices.
+	r = &recorderTB{}
+	if !ok.CmpEqual(r, []int{3, 1, 2}, []int{1, 2, 3}, cmpopts.SortSlices(func(a, b int) bool { return a < b })) {
+		t.Error("CmpEqual returned false for slices equal under SortSlices")
+	}
+	checkPass(t, r)
+
+	// Options apply to the failure diff too, not just the equality check.
+	r = &recorderTB{}
+	if ok.CmpEqual(r, []int{3, 1, 2}, []int{1, 2, 4}, cmpopts.SortSlices(func(a, b int) bool { return a < b })) {
+		t.Error("CmpEqual returned true for unequal slices")
+	}
+	checkFail(t, r, "not equal", "-want +got")
+
+	// cmp's panic for uncovered types must propagate: its message names the
+	// missing option, which is more useful than a swallowed failure.
+	defer func() {
+		if recover() == nil {
+			t.Error("CmpEqual did not panic on unexported fields without an option")
+		}
+	}()
+	ok.CmpEqual(&recorderTB{}, hidden{1}, hidden{2})
+}
+
+func TestCmpEqualIgnoreUnexported(t *testing.T) {
+	t.Parallel()
+	r := &recorderTB{}
+	if !ok.CmpEqual(r, hidden{1}, hidden{2}, cmpopts.IgnoreUnexported(hidden{})) {
+		t.Error("CmpEqual returned false with IgnoreUnexported covering the difference")
+	}
+	checkPass(t, r)
 }
 
 func TestEqualFunc(t *testing.T) {

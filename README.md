@@ -39,10 +39,12 @@ demo_test.go:21: not deeply equal:
     Tags[1->?]: -"running"
 ```
 
-**The type system picks the comparison.** `Equal` requires `comparable` and
-uses `==`; slices, maps, and pointer-heavy structs need an explicit
-`DeepEqual` (or `EqualFunc` with your own comparator). Using the wrong one is
-a compile error, not a surprise at runtime.
+**The name picks the comparison.** `Equal` requires `comparable` and uses
+`==`; slices, maps, and pointer-heavy structs need an explicit `DeepEqual`,
+`CmpEqual` (when equality needs [go-cmp] options, e.g. `protocmp.Transform`
+for protobufs), or `EqualFunc` with your own comparator. Using the wrong one
+is a compile error, not a surprise at runtime — and each escalation's cost
+is in its name, never in a default.
 
 ## API
 
@@ -51,6 +53,7 @@ a compile error, not a surprise at runtime.
 | `Equal[T comparable](tb, got, want)` | `got == want` |
 | `NotEqual[T comparable](tb, got, want)` | `got != want` |
 | `DeepEqual[T any](tb, got, want)` | `reflect.DeepEqual` |
+| `CmpEqual[T any](tb, got, want, opts...)` | `cmp.Equal` with [go-cmp] options |
 | `EqualFunc[T any](tb, got, want, equal)` | `equal(got, want)` |
 | `True(tb, got)` | `got` |
 | `NoError(tb, err)` | `err == nil` |
@@ -84,6 +87,7 @@ BenchmarkEqualInt-8         541268532    2.158 ns/op    0 B/op    0 allocs/op
 BenchmarkEqualString-8      416527341    2.886 ns/op    0 B/op    0 allocs/op
 BenchmarkDeepEqualSlice-8     9381274    126.3 ns/op   48 B/op    2 allocs/op
 BenchmarkDeepEqualMap-8       5407791    222.4 ns/op   64 B/op    6 allocs/op
+BenchmarkCmpEqualSlice-8       249854     4809 ns/op 1504 B/op   16 allocs/op
 ```
 
 The zero-allocation happy path for `Equal`, `NotEqual`, `EqualFunc`, `True`,

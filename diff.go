@@ -10,7 +10,7 @@ import (
 
 // diff pretty-prints the difference between got and want. It is only called
 // after an assertion has failed, so its cost never taxes a passing test.
-func diff[T any](tb TB, got, want T) (out string) {
+func diff[T any](tb TB, got, want T, opts ...cmp.Option) (out string) {
 	defer func() {
 		// cmp panics on types it can't compare (e.g. structs with
 		// unexported fields); fall back to plain formatting.
@@ -25,7 +25,8 @@ func diff[T any](tb TB, got, want T) (out string) {
 		w = o.Output()
 	}
 	r := colorcmp.New(w)
-	if cmp.Equal(want, got, cmp.Reporter(r)) {
+	opts = append(opts[:len(opts):len(opts)], cmp.Reporter(r))
+	if cmp.Equal(want, got, opts...) {
 		return fallback(got, want)
 	}
 	if d := r.String(); d != "" {
