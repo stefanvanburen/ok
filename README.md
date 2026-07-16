@@ -17,10 +17,13 @@ func TestUser(t *testing.T) {
 
 ## Design
 
-**Non-fatal, always.** Every assertion reports failure with `Errorf` and
-returns whether it passed. Halting is the *caller's* decision, expressed as
-ordinary control flow (`if !ok.NoError(t, err) { return }`) rather than a
-hidden `runtime.Goexit`. The `ok.TB` interface doesn't even include `Fatalf`.
+**Assertions never halt the test — the TB you pass decides.** Every
+assertion reports failure with `Errorf` and returns whether it passed, so
+halting is ordinary control flow (`if !ok.NoError(t, err) { return }`); the
+`ok.TB` interface doesn't even include `Fatalf`. When a failed guard should
+stop the test outright, wrap once — `must := ok.Must(t)` — and assertions
+reporting through that TB are fatal, testify's `require` without a second
+API.
 
 **Passing assertions are free.** Equality on comparable types is a `==`
 comparison — no reflection, no allocation, ~2ns. [go-cmp] and [colorcmp] are
@@ -105,7 +108,7 @@ want)`.)
 | `assert.Panics(t, fn)` | `ok.Panics(t, fn)` |
 | `assert.PanicsWithValue(t, v, fn)` | `got, _ := ok.Panics(t, fn)` then assert on `got` |
 | `assert.Never(t, cond, wait, tick)` | `ok.Never(t, wait, tick, attempt)` |
-| `require.*` | `if !ok.X(…) { return }` (or `t.FailNow()`) |
+| `require.*` | `must := ok.Must(t)` then `ok.X(must, …)`, or `if !ok.X(…) { return }` |
 
 The JSONEq translation is worth spelling out, because the failure diff names
 the path to each difference inside the JSON rather than dumping both
