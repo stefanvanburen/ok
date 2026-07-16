@@ -40,9 +40,7 @@ func Equal[T comparable](tb TB, got, want T) bool {
 	if got == want {
 		return true
 	}
-	g, w := formatPair(got, want)
-	tb.Errorf("got %s, want %s", g, w)
-	return false
+	return failPair(tb, got, want)
 }
 
 // NotEqual asserts that got != want.
@@ -89,9 +87,7 @@ func EqualFunc[T any](tb TB, got, want T, equal func(a, b T) bool) bool {
 	if equal(got, want) {
 		return true
 	}
-	g, w := formatPair(got, want)
-	tb.Errorf("got %s, want %s", g, w)
-	return false
+	return failPair(tb, got, want)
 }
 
 // True asserts that got is true. The optional msgAndArgs — a format string
@@ -105,7 +101,12 @@ func True(tb TB, got bool, msgAndArgs ...any) bool {
 		return true
 	}
 	if format, isString := first(msgAndArgs).(string); isString {
-		tb.Errorf(format, msgAndArgs[1:]...)
+		// Copy the args instead of reslicing: passing msgAndArgs itself to
+		// Errorf makes the parameter escape, which would heap-allocate the
+		// caller's variadic slice even when the assertion passes.
+		args := make([]any, len(msgAndArgs)-1)
+		copy(args, msgAndArgs[1:])
+		tb.Errorf(format, args...)
 	} else {
 		tb.Errorf("got false, want true")
 	}
@@ -188,6 +189,16 @@ func Zero[T comparable](tb TB, got T) bool {
 		return true
 	}
 	tb.Errorf("got %v, want zero value", got)
+	return false
+}
+
+// failPair reports the standard got/want failure. It is only called after
+// a comparison has failed, so boxing got and want here costs nothing on
+// the passing path.
+func failPair(tb TB, got, want any) bool {
+	tb.Helper()
+	g, w := formatPair(got, want)
+	tb.Errorf("got %s, want %s", g, w)
 	return false
 }
 

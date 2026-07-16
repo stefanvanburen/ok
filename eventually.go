@@ -52,22 +52,31 @@ func Never(tb TB, waitFor, tick time.Duration, attempt func(tb TB) bool) bool {
 	return true
 }
 
-// poll runs attempt every tick until it returns true or waitFor elapses,
-// reporting whether it ever returned true and the final attempt's recorder.
+// poll runs attempt every tick until it returns true or waitFor elapses.
+// Only the final attempt — the one at the deadline — gets a buffering
+// recorder, since only its failures can ever be reported; earlier attempts
+// get a no-op TB so their failures cost nothing to discard. last is nil
+// when an earlier attempt was satisfied.
 func poll(tb TB, waitFor, tick time.Duration, attempt func(tb TB) bool) (satisfied bool, last *recorder) {
 	deadline := time.Now().Add(waitFor)
 	for {
-		rec := &recorder{outer: tb}
-		if attempt(rec) {
-			return true, rec
-		}
 		remaining := time.Until(deadline)
 		if remaining <= 0 {
-			return false, rec
+			rec := &recorder{outer: tb}
+			return attempt(rec), rec
+		}
+		if attempt(quietTB{}) {
+			return true, nil
 		}
 		time.Sleep(min(tick, remaining))
 	}
 }
+
+// quietTB discards failures from non-final polling attempts.
+type quietTB struct{}
+
+func (quietTB) Helper()               {}
+func (quietTB) Errorf(string, ...any) {}
 
 // recorder is the TB handed to each Eventually attempt: it buffers failures
 // so that only the final attempt's are ever reported.
@@ -85,9 +94,4 @@ func (r *recorder) Errorf(format string, args ...any) {
 // Output forwards to the enclosing TB's Output writer when it has one, so
 // diffs rendered inside an attempt keep the same color detection as diffs
 // rendered directly against *testing.T.
-func (r *recorder) Output() io.Writer {
-	if o, ok := r.outer.(interface{ Output() io.Writer }); ok {
-		return o.Output()
-	}
-	return nil
-}
+func (r *recorder) Output() io.Writer { return outputWriter(r.outer) }
