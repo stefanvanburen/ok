@@ -1,9 +1,11 @@
 package ok_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stefanvanburen/ok"
 )
 
@@ -32,6 +34,32 @@ func ExampleEventually() {
 	fmt.Println("tries:", tries)
 	// Output:
 	// tries: 3
+}
+
+// ExampleCmpEqual asserts order-insensitive slice equality, testify's
+// assert.ElementsMatch.
+func ExampleCmpEqual() {
+	var t printTB // in real tests: *testing.T
+	less := func(a, b int) bool { return a < b }
+	if ok.CmpEqual(t, []int{3, 1, 2}, []int{1, 2, 3}, cmpopts.SortSlices(less)) {
+		fmt.Println("elements match")
+	}
+	// Output:
+	// elements match
+}
+
+// ExampleDeepEqual_json compares two JSON documents structurally, testify's
+// assert.JSONEq: on failure, the diff names the path to each difference.
+func ExampleDeepEqual_json() {
+	var t printTB // in real tests: *testing.T
+	var got, want any
+	ok.NoError(t, json.Unmarshal([]byte(`{"b":2,"a":1}`), &got))
+	ok.NoError(t, json.Unmarshal([]byte(`{"a":1,"b":2}`), &want))
+	if ok.DeepEqual(t, got, want) {
+		fmt.Println("same JSON")
+	}
+	// Output:
+	// same JSON
 }
 
 func ExampleNoError() {

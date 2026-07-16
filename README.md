@@ -78,6 +78,48 @@ ok.Eventually(t, 5*time.Second, 10*time.Millisecond, func(tb ok.TB) bool {
 })
 ```
 
+## Cookbook
+
+The API is deliberately small; most of testify's surface is a stdlib call
+away. (Note testify takes `(t, expected, actual)`; ok takes `(tb, got,
+want)`.)
+
+| testify | with ok |
+| --- | --- |
+| `assert.Same(t, want, got)` | `ok.Equal(t, got, want)` — `==` on pointers is identity |
+| `assert.Nil(t, p)` | `ok.Equal(t, p, nil)` |
+| `assert.EqualValues(t, 3, count)` | `ok.Equal(t, int(count), 3)` — explicit conversion |
+| `assert.Len(t, s, 2)` | `ok.Equal(t, len(s), 2)` |
+| `assert.Empty(t, s)` | `ok.Zero(t, len(s))` |
+| `assert.Contains(t, s, v)` | `ok.True(t, slices.Contains(s, v))` (or `strings.Contains`) |
+| `assert.ElementsMatch(t, a, b)` | `ok.CmpEqual(t, a, b, cmpopts.SortSlices(less))` |
+| `assert.InDelta(t, want, got, 0.01)` | `ok.CmpEqual(t, got, want, cmpopts.EquateApprox(0, 0.01))` |
+| `assert.WithinDuration(t, a, b, d)` | `ok.CmpEqual(t, a, b, cmpopts.EquateApproxTime(d))` |
+| `assert.JSONEq(t, want, got)` | unmarshal both into `any`, then `ok.DeepEqual` (see below) |
+| `assert.Greater(t, a, b)` | `ok.True(t, a > b)` |
+| `assert.Regexp(t, re, s)` | `ok.True(t, regexp.MustCompile(re).MatchString(s))` |
+| `assert.ErrorContains(t, err, "x")` | `ok.Error(t, err)` then `ok.True(t, strings.Contains(err.Error(), "x"))` |
+| `assert.FileExists(t, p)` | `_, err := os.Stat(p); ok.NoError(t, err)` |
+| `assert.Panics(t, fn)` | `defer func() { ok.True(t, recover() != nil) }()` inside a func |
+| `require.*` | `if !ok.X(…) { return }` (or `t.FailNow()`) |
+
+The JSONEq translation is worth spelling out, because the failure diff names
+the path to each difference inside the JSON rather than dumping both
+documents:
+
+```go
+var got, want any
+ok.NoError(t, json.Unmarshal(gotBody, &got))
+ok.NoError(t, json.Unmarshal([]byte(`{"name":"stefan","retries":5}`), &want))
+ok.DeepEqual(t, got, want)
+```
+
+```
+not deeply equal:
+diff (-want +got):
+["retries"].(float64): -5 +3
+```
+
 ## Benchmarks
 
 On an Apple M1:
