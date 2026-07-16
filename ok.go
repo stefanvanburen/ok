@@ -56,7 +56,7 @@ func DeepEqual[T any](tb TB, got, want T) bool {
 	if reflect.DeepEqual(got, want) {
 		return true
 	}
-	tb.Errorf("not deeply equal:\n%s", diff(got, want))
+	tb.Errorf("not deeply equal:\n%s", diff(tb, got, want))
 	return false
 }
 

@@ -23,9 +23,21 @@ ordinary control flow (`if !ok.NoError(t, err) { return }`) rather than a
 hidden `runtime.Goexit`. The `ok.TB` interface doesn't even include `Fatalf`.
 
 **Passing assertions are free.** Equality on comparable types is a `==`
-comparison — no reflection, no allocation, ~2ns. [go-cmp] is used only to
-pretty-print a diff *after* an assertion has failed, where cost no longer
-matters.
+comparison — no reflection, no allocation, ~2ns. [go-cmp] and [colorcmp] are
+used only to pretty-print a diff *after* an assertion has failed, where cost
+no longer matters.
+
+**Failures name the difference, not the whole value.** `DeepEqual` failures
+render a path-based diff via [colorcmp], colored red/green when the test is
+run in a terminal (`NO_COLOR` and `FORCE_COLOR` are respected; CI output
+stays plain):
+
+```
+demo_test.go:21: not deeply equal:
+    diff (-want +got):
+    Email: -"s@vanburen.xyz" +"stefan@vanburen.xyz"
+    Tags[1->?]: -"running"
+```
 
 **The type system picks the comparison.** `Equal` requires `comparable` and
 uses `==`; slices, maps, and pointer-heavy structs need an explicit
@@ -79,6 +91,7 @@ The zero-allocation happy path for `Equal`, `NotEqual`, `EqualFunc`, `True`,
   `must` package.
 
 [go-cmp]: https://github.com/google/go-cmp
+[colorcmp]: https://github.com/stefanvanburen/colorcmp
 [akshayjshah/attest]: https://github.com/akshayjshah/attest
 [matryer/is]: https://github.com/matryer/is
 [nalgeon/be]: https://github.com/nalgeon/be
