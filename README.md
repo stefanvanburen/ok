@@ -17,13 +17,13 @@ func TestUser(t *testing.T) {
 
 ## Design
 
-**Assertions never halt the test — the TB you pass decides.** Every
-assertion reports failure with `Errorf` and returns whether it passed, so
-halting is ordinary control flow (`if !ok.NoError(t, err) { return }`); the
-`ok.TB` interface doesn't even include `Fatalf`. When a failed guard should
-stop the test outright, wrap once — `must := ok.Must(t)` — and assertions
-reporting through that TB are fatal, testify's `require` without a second
-API.
+**Non-fatal, except where control flow lives.** Every assertion reports
+failure with `Errorf` and returns whether it passed, so halting is ordinary
+control flow (`if !ok.NoError(t, err) { return }`); the `ok.TB` interface
+doesn't even include `Fatalf`. The one deliberate exception is
+`ok.MustNoError(t, err)`: an error guard is the one place a test genuinely
+cannot proceed — the value it needed doesn't exist — so fatality lives
+there, and only there.
 
 **Passing assertions are free.** Equality on comparable types is a `==`
 comparison — no reflection, no allocation, ~2ns. [go-cmp] and [colorcmp] are
@@ -61,6 +61,7 @@ is in its name, never in a default.
 | `True(tb, got, msgAndArgs...)` | `got`, with an optional formatted failure message |
 | `Panics(tb, f) (any, bool)` | `f` panics; returns the recovered value |
 | `NoError(tb, err)` | `err == nil` |
+| `MustNoError(tb, err)` | `err == nil`, halting the test otherwise |
 | `Error(tb, err)` | `err != nil` |
 | `ErrorIs(tb, err, target)` | `errors.Is` |
 | `ErrorAs[T error](tb, err) (T, bool)` | `errors.As`, returning the match |
@@ -69,7 +70,7 @@ is in its name, never in a default.
 | `Never(tb, waitFor, tick, attempt)` | `attempt` stays false throughout `waitFor` |
 
 All assertions return `bool` (except `ErrorAs`, which also returns the
-matched error).
+matched error, and `MustNoError`, which either passes or halts).
 
 Because assertions return `bool`, `Eventually` needs no second
 `EventuallyWithT`-style variant: assertions *are* the condition, and the
@@ -108,7 +109,8 @@ want)`.)
 | `assert.Panics(t, fn)` | `ok.Panics(t, fn)` |
 | `assert.PanicsWithValue(t, v, fn)` | `got, _ := ok.Panics(t, fn)` then assert on `got` |
 | `assert.Never(t, cond, wait, tick)` | `ok.Never(t, wait, tick, attempt)` |
-| `require.*` | `must := ok.Must(t)` then `ok.X(must, …)`, or `if !ok.X(…) { return }` |
+| `require.NoError(t, err)` | `ok.MustNoError(t, err)` |
+| other `require.*` | `if !ok.X(…) { return }` (or `t.FailNow()`) |
 
 The JSONEq translation is worth spelling out, because the failure diff names
 the path to each difference inside the JSON rather than dumping both

@@ -27,6 +27,7 @@ type nopTB struct{}
 
 func (nopTB) Helper()               {}
 func (nopTB) Errorf(string, ...any) {}
+func (nopTB) Fatalf(string, ...any) {}
 
 // checkPass asserts both sides of the passing contract: the assertion
 // returned true and recorded nothing.
@@ -272,7 +273,7 @@ func TestNever(t *testing.T) {
 	})
 }
 
-// fatalTB records Fatalf calls for testing Must.
+// fatalTB records Fatalf calls for testing MustNoError.
 type fatalTB struct {
 	helpers int
 	fatals  []string
@@ -283,21 +284,17 @@ func (f *fatalTB) Fatalf(format string, args ...any) {
 	f.fatals = append(f.fatals, fmt.Sprintf(format, args...))
 }
 
-func TestMust(t *testing.T) {
+func TestMustNoError(t *testing.T) {
 	t.Parallel()
 	f := &fatalTB{}
-	must := ok.Must(f)
-
-	if !ok.Equal(must, 1, 1) {
-		t.Error("Equal returned false for equal values")
-	}
+	ok.MustNoError(f, nil)
 	if len(f.fatals) != 0 {
-		t.Fatalf("passing assertion reported fatal failures %q", f.fatals)
+		t.Fatalf("nil error reported fatal failures %q", f.fatals)
 	}
 
-	ok.Equal(must, 1, 2)
-	if len(f.fatals) != 1 || !strings.Contains(f.fatals[0], "got 1, want 2") {
-		t.Errorf("fatals = %q, want exactly one containing %q", f.fatals, "got 1, want 2")
+	ok.MustNoError(f, errors.New("boom"))
+	if len(f.fatals) != 1 || !strings.Contains(f.fatals[0], "unexpected error: boom") {
+		t.Errorf("fatals = %q, want exactly one containing %q", f.fatals, "unexpected error: boom")
 	}
 	if f.helpers == 0 {
 		t.Error("Helper was never called")

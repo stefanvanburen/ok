@@ -11,10 +11,8 @@ import (
 
 // outputWriter returns tb's Output writer when it has one — *testing.T
 // (Go 1.25+) does — for colorcmp's color detection. All probes of this
-// optional capability go through here so they can't drift apart. The
-// parameter is any rather than TB so wrappers holding narrower interfaces
-// (mustTB's FatalTB) can probe too.
-func outputWriter(tb any) io.Writer {
+// optional capability go through here so they can't drift apart.
+func outputWriter(tb TB) io.Writer {
 	if o, ok := tb.(interface{ Output() io.Writer }); ok {
 		return o.Output()
 	}

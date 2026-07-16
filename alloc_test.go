@@ -34,6 +34,7 @@ func TestPassingAssertionsDoNotAllocate(t *testing.T) {
 		ok.True(tb, true)
 		ok.True(tb, 1 < 2, "got %d, want < %d", 1, 2)
 		ok.NoError(tb, nil)
+		ok.MustNoError(tb, nil)
 		ok.Error(tb, sentinel)
 		ok.ErrorIs(tb, wrapped, sentinel)
 		ok.Zero(tb, 0)

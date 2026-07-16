@@ -149,6 +149,30 @@ func NoError(tb TB, err error) bool {
 	return false
 }
 
+// FatalTB is the subset of [testing.TB] that [MustNoError] requires.
+type FatalTB interface {
+	Helper()
+	Fatalf(format string, args ...any)
+}
+
+// MustNoError asserts that err is nil, halting the test via Fatalf
+// otherwise. It is the guard for errors the rest of the test cannot
+// proceed past — fatality in this package exists only here, on the error
+// path, where the control-flow dependency actually lives:
+//
+//	u, err := LookupUser("stefan")
+//	ok.MustNoError(t, err)
+//	ok.Equal(t, u.Name, "stefan")
+//
+// As with testing.TB's FailNow, MustNoError must run on the test's
+// goroutine.
+func MustNoError(tb FatalTB, err error) {
+	tb.Helper()
+	if err != nil {
+		tb.Fatalf("unexpected error: %v", err)
+	}
+}
+
 // Error asserts that err is non-nil.
 func Error(tb TB, err error) bool {
 	tb.Helper()
