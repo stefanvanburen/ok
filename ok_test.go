@@ -214,6 +214,77 @@ func TestTrue(t *testing.T) {
 	checkFail(t, r, "got false, want true")
 }
 
+func TestTrueMessage(t *testing.T) {
+	t.Parallel()
+	// A format string and args replace the default failure message.
+	r := &recorderTB{}
+	got, limit := 2, 3
+	if ok.True(r, got > limit, "got %d, want > %d", got, limit) {
+		t.Error("True returned true for a false predicate")
+	}
+	checkFail(t, r, "got 2, want > 3")
+
+	// A passing predicate must not evaluate or report the message.
+	r = &recorderTB{}
+	if !ok.True(r, got < limit, "got %d, want < %d", got, limit) {
+		t.Error("True returned false for a true predicate")
+	}
+	checkPass(t, r)
+}
+
+func TestPanics(t *testing.T) {
+	t.Parallel()
+	r := &recorderTB{}
+	v, panicked := ok.Panics(r, func() { panic("boom") })
+	if !panicked {
+		t.Error("Panics returned false for a panicking function")
+	}
+	// testify's PanicsWithValue: assert on the recovered value.
+	ok.Equal(t, v, any("boom"))
+	checkPass(t, r)
+
+	r = &recorderTB{}
+	if _, panicked := ok.Panics(r, func() {}); panicked {
+		t.Error("Panics returned true for a function that returned")
+	}
+	checkFail(t, r, "function did not panic")
+}
+
+func TestNever(t *testing.T) {
+	t.Parallel()
+	t.Run("stays false", func(t *testing.T) {
+		t.Parallel()
+		r := &recorderTB{}
+		attempts := 0
+		if !ok.Never(r, 20*time.Millisecond, 5*time.Millisecond, func(ok.TB) bool {
+			attempts++
+			return false
+		}) {
+			t.Error("Never returned false for an always-false condition")
+		}
+		if attempts < 2 {
+			t.Errorf("condition ran %d times, want at least an immediate and a deadline attempt", attempts)
+		}
+		checkPass(t, r)
+	})
+
+	t.Run("becomes true", func(t *testing.T) {
+		t.Parallel()
+		r := &recorderTB{}
+		attempts := 0
+		if ok.Never(r, time.Second, time.Millisecond, func(ok.TB) bool {
+			attempts++
+			return attempts == 3
+		}) {
+			t.Error("Never returned true for a condition that becomes true")
+		}
+		if attempts != 3 {
+			t.Errorf("condition ran %d times, want to stop at 3 (must fail as soon as satisfied)", attempts)
+		}
+		checkFail(t, r, "condition satisfied within 1s, want never")
+	})
+}
+
 func TestNoError(t *testing.T) {
 	t.Parallel()
 	r := &recorderTB{}

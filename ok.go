@@ -94,14 +94,48 @@ func EqualFunc[T any](tb TB, got, want T, equal func(a, b T) bool) bool {
 	return false
 }
 
-// True asserts that got is true.
-func True(tb TB, got bool) bool {
+// True asserts that got is true. The optional msgAndArgs — a format string
+// followed by its arguments — replace the default failure message, letting
+// predicates report runtime values:
+//
+//	ok.True(t, got > limit, "got %d, want > %d", got, limit)
+func True(tb TB, got bool, msgAndArgs ...any) bool {
 	tb.Helper()
 	if got {
 		return true
 	}
-	tb.Errorf("got false, want true")
+	if format, isString := first(msgAndArgs).(string); isString {
+		tb.Errorf(format, msgAndArgs[1:]...)
+	} else {
+		tb.Errorf("got false, want true")
+	}
 	return false
+}
+
+func first(s []any) any {
+	if len(s) == 0 {
+		return nil
+	}
+	return s[0]
+}
+
+// Panics asserts that f panics, returning the recovered value. Assert on
+// the value for testify's PanicsWithValue:
+//
+//	v, _ := ok.Panics(t, func() { mustParse("bogus") })
+//	ok.Equal(t, v, any("bogus input"))
+func Panics(tb TB, f func()) (recovered any, panicked bool) {
+	tb.Helper()
+	returned := false
+	func() {
+		defer func() { recovered = recover() }()
+		f()
+		returned = true
+	}()
+	if returned {
+		tb.Errorf("function did not panic")
+	}
+	return recovered, !returned
 }
 
 // NoError asserts that err is nil.

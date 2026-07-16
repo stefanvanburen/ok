@@ -55,13 +55,15 @@ is in its name, never in a default.
 | `DeepEqual[T any](tb, got, want)` | `reflect.DeepEqual` |
 | `CmpEqual[T any](tb, got, want, opts...)` | `cmp.Equal` with [go-cmp] options |
 | `EqualFunc[T any](tb, got, want, equal)` | `equal(got, want)` |
-| `True(tb, got)` | `got` |
+| `True(tb, got, msgAndArgs...)` | `got`, with an optional formatted failure message |
+| `Panics(tb, f) (any, bool)` | `f` panics; returns the recovered value |
 | `NoError(tb, err)` | `err == nil` |
 | `Error(tb, err)` | `err != nil` |
 | `ErrorIs(tb, err, target)` | `errors.Is` |
 | `ErrorAs[T error](tb, err) (T, bool)` | `errors.As`, returning the match |
 | `Zero[T comparable](tb, got)` | `got` is the zero value |
 | `Eventually(tb, waitFor, tick, attempt)` | `attempt` returns true within `waitFor` |
+| `Never(tb, waitFor, tick, attempt)` | `attempt` stays false throughout `waitFor` |
 
 All assertions return `bool` (except `ErrorAs`, which also returns the
 matched error).
@@ -96,11 +98,13 @@ want)`.)
 | `assert.InDelta(t, want, got, 0.01)` | `ok.CmpEqual(t, got, want, cmpopts.EquateApprox(0, 0.01))` |
 | `assert.WithinDuration(t, a, b, d)` | `ok.CmpEqual(t, a, b, cmpopts.EquateApproxTime(d))` |
 | `assert.JSONEq(t, want, got)` | unmarshal both into `any`, then `ok.DeepEqual` (see below) |
-| `assert.Greater(t, a, b)` | `ok.True(t, a > b)` |
+| `assert.Greater(t, a, b)` | `ok.True(t, a > b, "got %d, want > %d", a, b)` |
 | `assert.Regexp(t, re, s)` | `ok.True(t, regexp.MustCompile(re).MatchString(s))` |
 | `assert.ErrorContains(t, err, "x")` | `ok.Error(t, err)` then `ok.True(t, strings.Contains(err.Error(), "x"))` |
 | `assert.FileExists(t, p)` | `_, err := os.Stat(p); ok.NoError(t, err)` |
-| `assert.Panics(t, fn)` | `defer func() { ok.True(t, recover() != nil) }()` inside a func |
+| `assert.Panics(t, fn)` | `ok.Panics(t, fn)` |
+| `assert.PanicsWithValue(t, v, fn)` | `got, _ := ok.Panics(t, fn)` then assert on `got` |
+| `assert.Never(t, cond, wait, tick)` | `ok.Never(t, wait, tick, attempt)` |
 | `require.*` | `if !ok.X(…) { return }` (or `t.FailNow()`) |
 
 The JSONEq translation is worth spelling out, because the failure diff names

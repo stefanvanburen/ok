@@ -26,20 +26,44 @@ import (
 // on every poll.
 func Eventually(tb TB, waitFor, tick time.Duration, attempt func(tb TB) bool) bool {
 	tb.Helper()
+	satisfied, last := poll(tb, waitFor, tick, attempt)
+	if satisfied {
+		return true
+	}
+	msg := fmt.Sprintf("condition not satisfied within %v", waitFor)
+	if len(last.failures) > 0 {
+		msg += "; failures from final attempt:\n" + strings.Join(last.failures, "\n")
+	}
+	tb.Errorf("%s", msg)
+	return false
+}
+
+// Never asserts that attempt returns false for the entire waitFor window,
+// polling every tick — [Eventually]'s inverse. Like Eventually, the first
+// attempt runs immediately, a final attempt runs at the deadline, and
+// failures reported inside attempt are buffered, never surfaced: an attempt
+// is simply satisfied or not.
+func Never(tb TB, waitFor, tick time.Duration, attempt func(tb TB) bool) bool {
+	tb.Helper()
+	if satisfied, _ := poll(tb, waitFor, tick, attempt); satisfied {
+		tb.Errorf("condition satisfied within %v, want never", waitFor)
+		return false
+	}
+	return true
+}
+
+// poll runs attempt every tick until it returns true or waitFor elapses,
+// reporting whether it ever returned true and the final attempt's recorder.
+func poll(tb TB, waitFor, tick time.Duration, attempt func(tb TB) bool) (satisfied bool, last *recorder) {
 	deadline := time.Now().Add(waitFor)
 	for {
 		rec := &recorder{outer: tb}
 		if attempt(rec) {
-			return true
+			return true, rec
 		}
 		remaining := time.Until(deadline)
 		if remaining <= 0 {
-			msg := fmt.Sprintf("condition not satisfied within %v", waitFor)
-			if len(rec.failures) > 0 {
-				msg += "; failures from final attempt:\n" + strings.Join(rec.failures, "\n")
-			}
-			tb.Errorf("%s", msg)
-			return false
+			return false, rec
 		}
 		time.Sleep(min(tick, remaining))
 	}
