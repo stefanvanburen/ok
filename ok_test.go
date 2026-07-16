@@ -248,6 +248,61 @@ func TestZero(t *testing.T) {
 	checkFail(t, r, "got 7, want zero value")
 }
 
+func TestEventually(t *testing.T) {
+	t.Run("immediate", func(t *testing.T) {
+		r := &recorderTB{}
+		attempts := 0
+		if !ok.Eventually(r, time.Second, time.Millisecond, func(ok.TB) bool {
+			attempts++
+			return true
+		}) {
+			t.Error("Eventually returned false for an immediately-true condition")
+		}
+		if attempts != 1 {
+			t.Errorf("condition ran %d times, want 1 (first check must not wait a tick)", attempts)
+		}
+		checkPass(t, r)
+	})
+
+	t.Run("eventually true", func(t *testing.T) {
+		r := &recorderTB{}
+		attempts := 0
+		if !ok.Eventually(r, time.Second, time.Millisecond, func(tb ok.TB) bool {
+			attempts++
+			return ok.Equal(tb, attempts, 3)
+		}) {
+			t.Error("Eventually returned false for a condition that becomes true")
+		}
+		if attempts != 3 {
+			t.Errorf("condition ran %d times, want 3", attempts)
+		}
+		checkPass(t, r)
+	})
+
+	t.Run("timeout", func(t *testing.T) {
+		r := &recorderTB{}
+		if ok.Eventually(r, 20*time.Millisecond, 5*time.Millisecond, func(tb ok.TB) bool {
+			return ok.Equal(tb, 2, 3)
+		}) {
+			t.Error("Eventually returned true for an always-false condition")
+		}
+		// Exactly one failure on the enclosing TB: the failing polls along
+		// the way must stay silent, and the final attempt's assertion
+		// failure must be included in the report.
+		checkFail(t, r, "condition not satisfied within 20ms", "got 2, want 3")
+	})
+
+	t.Run("timeout without assertions", func(t *testing.T) {
+		r := &recorderTB{}
+		if ok.Eventually(r, time.Millisecond, time.Millisecond, func(ok.TB) bool {
+			return false
+		}) {
+			t.Error("Eventually returned true for an always-false condition")
+		}
+		checkFail(t, r, "condition not satisfied within 1ms")
+	})
+}
+
 // TestRealT exercises the passing paths against a real *testing.T.
 func TestRealT(t *testing.T) {
 	ok.Equal(t, 1+1, 2)

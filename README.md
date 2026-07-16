@@ -58,9 +58,22 @@ a compile error, not a surprise at runtime.
 | `ErrorIs(tb, err, target)` | `errors.Is` |
 | `ErrorAs[T error](tb, err) (T, bool)` | `errors.As`, returning the match |
 | `Zero[T comparable](tb, got)` | `got` is the zero value |
+| `Eventually(tb, waitFor, tick, attempt)` | `attempt` returns true within `waitFor` |
 
 All assertions return `bool` (except `ErrorAs`, which also returns the
 matched error).
+
+Because assertions return `bool`, `Eventually` needs no second
+`EventuallyWithT`-style variant: assertions *are* the condition, and the
+`TB` handed to each attempt buffers their failures so only the final
+attempt's are reported on timeout.
+
+```go
+ok.Eventually(t, 5*time.Second, 10*time.Millisecond, func(tb ok.TB) bool {
+    n, err := store.Count(ctx)
+    return ok.NoError(tb, err) && ok.Equal(tb, n, 3)
+})
+```
 
 ## Benchmarks
 
