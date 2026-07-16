@@ -15,6 +15,11 @@ import (
 // TestPassingAssertionsDoNotAllocate enforces the package's core contract:
 // assertions that pass are free. DeepEqual and ErrorAs are excluded — both
 // are documented to use reflection.
+//
+// This test must not call t.Parallel: AllocsPerRun measures via the
+// runtime's global allocation counters, so allocations from concurrently
+// running tests would pollute the count. Running serially keeps it alone in
+// the process — parallel tests are paused until the sequential pass ends.
 func TestPassingAssertionsDoNotAllocate(t *testing.T) {
 	tb := nopTB{}
 	sentinel := errors.New("sentinel")

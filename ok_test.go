@@ -55,6 +55,7 @@ func checkPass(t *testing.T, r *recorderTB) {
 }
 
 func TestEqual(t *testing.T) {
+	t.Parallel()
 	r := &recorderTB{}
 	if !ok.Equal(r, "a", "a") {
 		t.Error("Equal returned false for equal values")
@@ -69,6 +70,7 @@ func TestEqual(t *testing.T) {
 }
 
 func TestEqualAmbiguousFormatting(t *testing.T) {
+	t.Parallel()
 	// int(1) and string "1" both render as "1" with %v; the message must
 	// fall back to %#v so the difference is visible.
 	r := &recorderTB{}
@@ -79,6 +81,7 @@ func TestEqualAmbiguousFormatting(t *testing.T) {
 }
 
 func TestNotEqual(t *testing.T) {
+	t.Parallel()
 	r := &recorderTB{}
 	if !ok.NotEqual(r, 1, 2) {
 		t.Error("NotEqual returned false for unequal values")
@@ -93,6 +96,7 @@ func TestNotEqual(t *testing.T) {
 }
 
 func TestDeepEqual(t *testing.T) {
+	t.Parallel()
 	r := &recorderTB{}
 	if !ok.DeepEqual(r, []int{1, 2}, []int{1, 2}) {
 		t.Error("DeepEqual returned false for equal slices")
@@ -111,6 +115,7 @@ type hidden struct {
 }
 
 func TestDeepEqualUnexportedFields(t *testing.T) {
+	t.Parallel()
 	// cmp.Diff panics on unexported fields; the failure message must fall
 	// back to %#v formatting instead of panicking.
 	r := &recorderTB{}
@@ -121,6 +126,7 @@ func TestDeepEqualUnexportedFields(t *testing.T) {
 }
 
 func TestDeepEqualEmptyDiff(t *testing.T) {
+	t.Parallel()
 	// Two times differing only in the monotonic clock reading:
 	// reflect.DeepEqual reports unequal, but cmp (via time.Time.Equal)
 	// produces an empty diff — the message must fall back to %#v.
@@ -134,6 +140,7 @@ func TestDeepEqualEmptyDiff(t *testing.T) {
 }
 
 func TestEqualFunc(t *testing.T) {
+	t.Parallel()
 	fold := func(a, b string) bool { return strings.EqualFold(a, b) }
 
 	r := &recorderTB{}
@@ -150,6 +157,7 @@ func TestEqualFunc(t *testing.T) {
 }
 
 func TestTrue(t *testing.T) {
+	t.Parallel()
 	r := &recorderTB{}
 	if !ok.True(r, 1 < 2) {
 		t.Error("True returned false")
@@ -164,6 +172,7 @@ func TestTrue(t *testing.T) {
 }
 
 func TestNoError(t *testing.T) {
+	t.Parallel()
 	r := &recorderTB{}
 	if !ok.NoError(r, nil) {
 		t.Error("NoError returned false for nil error")
@@ -178,6 +187,7 @@ func TestNoError(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
+	t.Parallel()
 	r := &recorderTB{}
 	if !ok.Error(r, errors.New("boom")) {
 		t.Error("Error returned false for non-nil error")
@@ -192,6 +202,7 @@ func TestError(t *testing.T) {
 }
 
 func TestErrorIs(t *testing.T) {
+	t.Parallel()
 	sentinel := errors.New("sentinel")
 	wrapped := fmt.Errorf("context: %w", sentinel)
 
@@ -215,6 +226,7 @@ type codeError struct {
 func (e *codeError) Error() string { return fmt.Sprintf("code %d", e.code) }
 
 func TestErrorAs(t *testing.T) {
+	t.Parallel()
 	wrapped := fmt.Errorf("context: %w", &codeError{code: 42})
 
 	r := &recorderTB{}
@@ -235,6 +247,7 @@ func TestErrorAs(t *testing.T) {
 }
 
 func TestZero(t *testing.T) {
+	t.Parallel()
 	r := &recorderTB{}
 	if !ok.Zero(r, "") {
 		t.Error("Zero returned false for zero value")
@@ -249,7 +262,9 @@ func TestZero(t *testing.T) {
 }
 
 func TestEventually(t *testing.T) {
+	t.Parallel()
 	t.Run("immediate", func(t *testing.T) {
+		t.Parallel()
 		r := &recorderTB{}
 		attempts := 0
 		if !ok.Eventually(r, time.Second, time.Millisecond, func(ok.TB) bool {
@@ -265,6 +280,7 @@ func TestEventually(t *testing.T) {
 	})
 
 	t.Run("eventually true", func(t *testing.T) {
+		t.Parallel()
 		r := &recorderTB{}
 		attempts := 0
 		if !ok.Eventually(r, time.Second, time.Millisecond, func(tb ok.TB) bool {
@@ -280,6 +296,7 @@ func TestEventually(t *testing.T) {
 	})
 
 	t.Run("timeout", func(t *testing.T) {
+		t.Parallel()
 		r := &recorderTB{}
 		if ok.Eventually(r, 20*time.Millisecond, 5*time.Millisecond, func(tb ok.TB) bool {
 			return ok.Equal(tb, 2, 3)
@@ -293,6 +310,7 @@ func TestEventually(t *testing.T) {
 	})
 
 	t.Run("timeout without assertions", func(t *testing.T) {
+		t.Parallel()
 		r := &recorderTB{}
 		if ok.Eventually(r, time.Millisecond, time.Millisecond, func(ok.TB) bool {
 			return false
@@ -305,6 +323,7 @@ func TestEventually(t *testing.T) {
 
 // TestRealT exercises the passing paths against a real *testing.T.
 func TestRealT(t *testing.T) {
+	t.Parallel()
 	ok.Equal(t, 1+1, 2)
 	ok.NotEqual(t, "got", "want")
 	ok.DeepEqual(t, map[string]int{"a": 1}, map[string]int{"a": 1})
