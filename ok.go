@@ -1,17 +1,20 @@
-// Package ok provides small, non-fatal test assertions.
+// Package ok provides small test assertions.
 //
-// Every assertion reports failure with (testing.TB).Errorf and returns
-// whether it passed, so tests decide for themselves when to stop:
+// Assertions report failures with (testing.TB).Errorf and return whether
+// they passed, so a test decides for itself when to stop:
 //
-//	if !ok.NoError(t, err) {
-//		return // can't continue without the value
+//	if !ok.DeepEqual(t, got, want) {
+//		return
 //	}
-//	ok.Equal(t, got.Name, "stefan")
 //
-// Assertions that pass do not allocate, with the exception of [DeepEqual],
-// which uses reflection. Equality on comparable types is checked with ==;
-// [github.com/google/go-cmp/cmp] is used only to format diffs after a
-// failure.
+// The exception is [MustNoError], which calls Fatalf: when a test can't
+// get a value it needs, there's rarely a point in continuing.
+//
+// Equality on comparable types is checked with ==, and assertions that
+// pass do not allocate ([DeepEqual], [CmpEqual], and [ErrorAs] excepted;
+// they use reflection). [github.com/google/go-cmp/cmp] and
+// [github.com/stefanvanburen/colorcmp] run only after a failure, to
+// format the diff.
 package ok
 
 import (
@@ -22,9 +25,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// TB is the subset of [testing.TB] used by this package.
+// TB is the subset of [testing.TB] used by assertions.
 //
-// Fatalf is deliberately absent: assertions never halt the test.
+// Fatalf is absent: assertions report through Errorf and never halt the
+// test. The one function that halts, [MustNoError], takes a [FatalTB].
 type TB interface {
 	Helper()
 	Errorf(format string, args ...any)
@@ -156,9 +160,7 @@ type FatalTB interface {
 }
 
 // MustNoError asserts that err is nil, halting the test via Fatalf
-// otherwise. It is the guard for errors the rest of the test cannot
-// proceed past — fatality in this package exists only here, on the error
-// path, where the control-flow dependency actually lives:
+// otherwise. Use it to guard values the rest of the test needs:
 //
 //	u, err := LookupUser("stefan")
 //	ok.MustNoError(t, err)
