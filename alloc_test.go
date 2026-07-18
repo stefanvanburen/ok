@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stefanvanburen/ok"
+	"go.vanburen.xyz/ok"
 )
 
 // TestPassingAssertionsDoNotAllocate enforces the package's core contract:

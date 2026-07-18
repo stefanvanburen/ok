@@ -1,4 +1,4 @@
-module github.com/stefanvanburen/ok
+module go.vanburen.xyz/ok
 
 go 1.25.0
 

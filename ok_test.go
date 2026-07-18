@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/stefanvanburen/ok"
+	"go.vanburen.xyz/ok"
 )
 
 // recorderTB records failures for asserting on failure messages.

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/stefanvanburen/ok"
+	"go.vanburen.xyz/ok"
 )
 
 // printTB stands in for *testing.T so the examples below can show real

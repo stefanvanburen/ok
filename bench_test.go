@@ -3,7 +3,7 @@ package ok_test
 import (
 	"testing"
 
-	"github.com/stefanvanburen/ok"
+	"go.vanburen.xyz/ok"
 )
 
 func BenchmarkEqualInt(b *testing.B) {

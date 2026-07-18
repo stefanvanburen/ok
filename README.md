@@ -1,6 +1,6 @@
 # ok
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/stefanvanburen/ok.svg)](https://pkg.go.dev/github.com/stefanvanburen/ok)
+[![Go Reference](https://pkg.go.dev/badge/go.vanburen.xyz/ok.svg)](https://pkg.go.dev/go.vanburen.xyz/ok)
 
 Small test assertions for Go.
 
@@ -17,7 +17,7 @@ func TestUser(t *testing.T) {
 ## Installation
 
 ```console
-$ go get github.com/stefanvanburen/ok
+$ go get go.vanburen.xyz/ok
 ```
 
 ## Usage
