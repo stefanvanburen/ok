@@ -89,7 +89,9 @@ ok.Eventually(t, 5*time.Second, 10*time.Millisecond, func(tb ok.TB) bool {
 ## Cookbook
 
 Much of testify's surface is a stdlib call away. (testify takes
-`(t, expected, actual)`; ok takes `(tb, got, want)`.)
+`(t, expected, actual)`; ok takes `(tb, got, want)`.) The predicate checks
+pass a message so a failure shows the values, since `True` on its own
+reports only `got false, want true`.
 
 | testify | with ok |
 | --- | --- |
@@ -98,14 +100,14 @@ Much of testify's surface is a stdlib call away. (testify takes
 | `assert.EqualValues(t, 3, count)` | `ok.Equal(t, int(count), 3)` |
 | `assert.Len(t, s, 2)` | `ok.Equal(t, len(s), 2)` |
 | `assert.Empty(t, s)` | `ok.Zero(t, len(s))` |
-| `assert.Contains(t, s, v)` | `ok.True(t, slices.Contains(s, v))` |
+| `assert.Contains(t, s, v)` | `ok.True(t, slices.Contains(s, v), "%v not in %v", v, s)` |
 | `assert.ElementsMatch(t, a, b)` | `ok.CmpEqual(t, a, b, cmpopts.SortSlices(less))` |
 | `assert.InDelta(t, want, got, 0.01)` | `ok.CmpEqual(t, got, want, cmpopts.EquateApprox(0, 0.01))` |
 | `assert.WithinDuration(t, a, b, d)` | `ok.CmpEqual(t, a, b, cmpopts.EquateApproxTime(d))` |
 | `assert.JSONEq(t, want, got)` | unmarshal both into `any`, then `ok.DeepEqual` |
 | `assert.Greater(t, a, b)` | `ok.True(t, a > b, "got %d, want > %d", a, b)` |
-| `assert.Regexp(t, re, s)` | `ok.True(t, regexp.MustCompile(re).MatchString(s))` |
-| `assert.ErrorContains(t, err, "x")` | `ok.True(t, strings.Contains(err.Error(), "x"))` |
+| `assert.Regexp(t, re, s)` | `ok.True(t, regexp.MustCompile(re).MatchString(s), "%q does not match %s", s, re)` |
+| `assert.ErrorContains(t, err, "x")` | `ok.True(t, strings.Contains(err.Error(), "x"), "%q not in %v", "x", err)` |
 | `assert.FileExists(t, p)` | `_, err := os.Stat(p); ok.NoError(t, err)` |
 | `assert.Panics(t, fn)` | `ok.Panics(t, fn)` |
 | `assert.PanicsWithValue(t, v, fn)` | `got, _ := ok.Panics(t, fn)`, then assert on `got` |

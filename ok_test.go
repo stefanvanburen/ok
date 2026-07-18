@@ -3,6 +3,7 @@ package ok_test
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -273,7 +274,8 @@ func TestNever(t *testing.T) {
 	})
 }
 
-// fatalTB records Fatalf calls for testing MustNoError.
+// fatalTB records Fatalf calls and then halts the goroutine, modelling how
+// testing.T.Fatalf ends a test via runtime.Goexit.
 type fatalTB struct {
 	helpers int
 	fatals  []string
@@ -282,17 +284,37 @@ type fatalTB struct {
 func (f *fatalTB) Helper() { f.helpers++ }
 func (f *fatalTB) Fatalf(format string, args ...any) {
 	f.fatals = append(f.fatals, fmt.Sprintf(format, args...))
+	runtime.Goexit()
+}
+
+// ran reports whether fn returned normally rather than halting via Goexit.
+// fn runs in its own goroutine so a Fatalf/Goexit can't take down the test.
+func ran(fn func()) (returned bool) {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		fn()
+		returned = true
+	}()
+	<-done
+	return returned
 }
 
 func TestMustNoError(t *testing.T) {
 	t.Parallel()
+
 	f := &fatalTB{}
-	ok.MustNoError(f, nil)
+	if !ran(func() { ok.MustNoError(f, nil) }) {
+		t.Error("MustNoError halted on a nil error")
+	}
 	if len(f.fatals) != 0 {
 		t.Fatalf("nil error reported fatal failures %q", f.fatals)
 	}
 
-	ok.MustNoError(f, errors.New("boom"))
+	f = &fatalTB{}
+	if ran(func() { ok.MustNoError(f, errors.New("boom")) }) {
+		t.Error("MustNoError did not halt on a non-nil error")
+	}
 	if len(f.fatals) != 1 || !strings.Contains(f.fatals[0], "unexpected error: boom") {
 		t.Errorf("fatals = %q, want exactly one containing %q", f.fatals, "unexpected error: boom")
 	}
