@@ -59,22 +59,35 @@ user_test.go:21: not deeply equal:
 
 | Assertion | Checks |
 | --- | --- |
-| `Equal[T comparable](tb, got, want)` | `got == want` |
-| `NotEqual[T comparable](tb, got, want)` | `got != want` |
-| `DeepEqual[T any](tb, got, want)` | `reflect.DeepEqual` |
+| `Equal[T comparable](tb, got, want, msgAndArgs...)` | `got == want` |
+| `NotEqual[T comparable](tb, got, want, msgAndArgs...)` | `got != want` |
+| `DeepEqual[T any](tb, got, want, msgAndArgs...)` | `reflect.DeepEqual` |
 | `CmpEqual[T any](tb, got, want, opts...)` | `cmp.Equal` with [go-cmp] options |
-| `EqualFunc[T any](tb, got, want, equal)` | `equal(got, want)` |
+| `EqualFunc[T any](tb, got, want, equal, msgAndArgs...)` | `equal(got, want)` |
 | `True(tb, got, msgAndArgs...)` | `got`, with an optional formatted failure message |
 | `Panics(tb, f) (any, bool)` | `f` panics; returns the recovered value |
-| `NoError(tb, err)` | `err == nil` |
-| `MustNoError(tb, err)` | `err == nil`, halting the test otherwise |
-| `Error(tb, err)` | `err != nil` |
-| `ErrorIs(tb, err, target)` | `errors.Is` |
+| `NoError(tb, err, msgAndArgs...)` | `err == nil` |
+| `MustNoError(tb, err, msgAndArgs...)` | `err == nil`, halting the test otherwise |
+| `Error(tb, err, msgAndArgs...)` | `err != nil` |
+| `ErrorIs(tb, err, target, msgAndArgs...)` | `errors.Is` |
 | `ErrorAs[T error](tb, err) (T, bool)` | `errors.As`, returning the match |
-| `ErrorContains(tb, err, substr)` | `err` is non-nil and its message contains `substr` |
-| `Zero[T comparable](tb, got)` | `got` is the zero value |
+| `ErrorContains(tb, err, substr, msgAndArgs...)` | `err` is non-nil and its message contains `substr` |
+| `Zero[T comparable](tb, got, msgAndArgs...)` | `got` is the zero value |
 | `Eventually(tb, waitFor, tick, attempt)` | `attempt` returns true within `waitFor` |
 | `Never(tb, waitFor, tick, attempt)` | `attempt` stays false throughout `waitFor` |
+
+Most assertions take optional `msgAndArgs` — a format string and its
+arguments — to add context to a failure:
+
+```go
+ok.Equal(t, len(matches), 2, "case-insensitive matches for %q", query)
+// got 3, want 2: case-insensitive matches for "Foo"
+```
+
+The message is appended to the got/want report. `True` is the exception:
+there the message *replaces* `got false, want true`, which carries nothing
+worth keeping. `CmpEqual` takes no message — its variadic slot holds cmp
+options.
 
 `Eventually` and `Never` poll a condition. Assertions can serve as the
 condition, since they return their result; failures inside an attempt are

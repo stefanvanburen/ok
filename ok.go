@@ -10,9 +10,16 @@
 // The exception is [MustNoError], which calls Fatalf: when a test can't
 // get a value it needs, there's rarely a point in continuing.
 //
+// Most assertions take optional msgAndArgs — a format string followed by
+// its arguments — to add context to a failure. [True] is the exception in
+// kind: its message replaces the default, because "got false, want true"
+// is worth nothing, while everywhere else the message is appended to the
+// got/want report. [CmpEqual] is the exception in fact: its variadic slot
+// belongs to cmp options.
+//
 // Equality on comparable types is checked with ==, and assertions that
 // pass do not allocate ([DeepEqual], [CmpEqual], and [ErrorAs] excepted;
-// they use reflection). [github.com/google/go-cmp/cmp] and
+// they use reflection), whether or not they carry a message. [github.com/google/go-cmp/cmp] and
 // [github.com/stefanvanburen/colorcmp] run only after a failure, to
 // format the diff.
 package ok
@@ -40,32 +47,32 @@ type TB interface {
 // Note that on pointer types == asserts identity, not value equality: two
 // distinct pointers to equal values are not ==. Use [DeepEqual], [CmpEqual],
 // or [EqualFunc] to compare what pointers point at.
-func Equal[T comparable](tb TB, got, want T) bool {
+func Equal[T comparable](tb TB, got, want T, msgAndArgs ...any) bool {
 	tb.Helper()
 	if got == want {
 		return true
 	}
-	return failPair(tb, got, want)
+	return failPair(tb, got, want, msgAndArgs)
 }
 
 // NotEqual asserts that got != want.
-func NotEqual[T comparable](tb TB, got, want T) bool {
+func NotEqual[T comparable](tb TB, got, want T, msgAndArgs ...any) bool {
 	tb.Helper()
 	if got != want {
 		return true
 	}
-	tb.Errorf("got %v, want anything else", got)
+	tb.Errorf("got %v, want anything else%s", got, annotate(msgAndArgs))
 	return false
 }
 
 // DeepEqual asserts that got and want are equal using [reflect.DeepEqual].
 // Prefer [Equal] for comparable types: it is faster and stricter.
-func DeepEqual[T any](tb TB, got, want T) bool {
+func DeepEqual[T any](tb TB, got, want T, msgAndArgs ...any) bool {
 	tb.Helper()
 	if reflect.DeepEqual(got, want) {
 		return true
 	}
-	tb.Errorf("not deeply equal:\n%s", diff(tb, got, want))
+	tb.Errorf("not deeply equal%s:\n%s", annotate(msgAndArgs), diff(tb, got, want))
 	return false
 }
 
@@ -87,12 +94,12 @@ func CmpEqual[T any](tb TB, got, want T, opts ...cmp.Option) bool {
 }
 
 // EqualFunc asserts that got and want are equal according to equal.
-func EqualFunc[T any](tb TB, got, want T, equal func(a, b T) bool) bool {
+func EqualFunc[T any](tb TB, got, want T, equal func(a, b T) bool, msgAndArgs ...any) bool {
 	tb.Helper()
 	if equal(got, want) {
 		return true
 	}
-	return failPair(tb, got, want)
+	return failPair(tb, got, want, msgAndArgs)
 }
 
 // True asserts that got is true. The optional msgAndArgs — a format string
@@ -145,12 +152,12 @@ func Panics(tb TB, f func()) (recovered any, panicked bool) {
 }
 
 // NoError asserts that err is nil.
-func NoError(tb TB, err error) bool {
+func NoError(tb TB, err error, msgAndArgs ...any) bool {
 	tb.Helper()
 	if err == nil {
 		return true
 	}
-	tb.Errorf("unexpected error: %v", err)
+	tb.Errorf("unexpected error: %v%s", err, annotate(msgAndArgs))
 	return false
 }
 
@@ -169,30 +176,30 @@ type FatalTB interface {
 //
 // As with testing.TB's FailNow, MustNoError must run on the test's
 // goroutine.
-func MustNoError(tb FatalTB, err error) {
+func MustNoError(tb FatalTB, err error, msgAndArgs ...any) {
 	tb.Helper()
 	if err != nil {
-		tb.Fatalf("unexpected error: %v", err)
+		tb.Fatalf("unexpected error: %v%s", err, annotate(msgAndArgs))
 	}
 }
 
 // Error asserts that err is non-nil.
-func Error(tb TB, err error) bool {
+func Error(tb TB, err error, msgAndArgs ...any) bool {
 	tb.Helper()
 	if err != nil {
 		return true
 	}
-	tb.Errorf("got nil, want an error")
+	tb.Errorf("got nil, want an error%s", annotate(msgAndArgs))
 	return false
 }
 
 // ErrorIs asserts that [errors.Is](err, target) is true.
-func ErrorIs(tb TB, err, target error) bool {
+func ErrorIs(tb TB, err, target error, msgAndArgs ...any) bool {
 	tb.Helper()
 	if errors.Is(err, target) {
 		return true
 	}
-	tb.Errorf("got error %v, want %v in its chain", err, target)
+	tb.Errorf("got error %v, want %v in its chain%s", err, target, annotate(msgAndArgs))
 	return false
 }
 
@@ -215,38 +222,59 @@ func ErrorAs[T error](tb TB, err error) (T, bool) {
 // type to match: message text is rarely part of an API's contract, so a
 // test that matches on it breaks when the wording is reworded. This is for
 // the errors that give you nothing else to match on.
-func ErrorContains(tb TB, err error, substr string) bool {
+func ErrorContains(tb TB, err error, substr string, msgAndArgs ...any) bool {
 	tb.Helper()
 	if err == nil {
-		tb.Errorf("got nil, want an error containing %q", substr)
+		tb.Errorf("got nil, want an error containing %q%s", substr, annotate(msgAndArgs))
 		return false
 	}
 	if msg := err.Error(); !strings.Contains(msg, substr) {
-		tb.Errorf("got error %q, want it to contain %q", msg, substr)
+		tb.Errorf("got error %q, want it to contain %q%s", msg, substr, annotate(msgAndArgs))
 		return false
 	}
 	return true
 }
 
 // Zero asserts that got is the zero value of its type.
-func Zero[T comparable](tb TB, got T) bool {
+func Zero[T comparable](tb TB, got T, msgAndArgs ...any) bool {
 	tb.Helper()
 	var zero T
 	if got == zero {
 		return true
 	}
-	tb.Errorf("got %v, want zero value", got)
+	tb.Errorf("got %v, want zero value%s", got, annotate(msgAndArgs))
 	return false
 }
 
 // failPair reports the standard got/want failure. It is only called after
 // a comparison has failed, so boxing got and want here costs nothing on
 // the passing path.
-func failPair(tb TB, got, want any) bool {
+func failPair(tb TB, got, want any, msgAndArgs []any) bool {
 	tb.Helper()
 	g, w := formatPair(got, want)
-	tb.Errorf("got %s, want %s", g, w)
+	tb.Errorf("got %s, want %s%s", g, w, annotate(msgAndArgs))
 	return false
+}
+
+// annotate renders the optional msgAndArgs — a format string followed by
+// its arguments — as a ": "-prefixed suffix, or "" when there are none.
+//
+// This differs from [True], where msgAndArgs replace the default message.
+// True's "got false, want true" says nothing worth keeping; the assertions
+// that use annotate already report got and want, so a caller's context is
+// added to that rather than displacing it.
+//
+// Only ever called after an assertion has failed, so the formatting cost
+// never taxes a passing test.
+func annotate(msgAndArgs []any) string {
+	format, isString := first(msgAndArgs).(string)
+	if !isString {
+		return ""
+	}
+	// Copy the args instead of reslicing, for the reason given in True.
+	args := make([]any, len(msgAndArgs)-1)
+	copy(args, msgAndArgs[1:])
+	return ": " + fmt.Sprintf(format, args...)
 }
 
 // formatPair renders two unequal values for a failure message. When their

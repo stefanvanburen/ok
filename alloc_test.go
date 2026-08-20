@@ -39,6 +39,16 @@ func TestPassingAssertionsDoNotAllocate(t *testing.T) {
 		ok.ErrorIs(tb, wrapped, sentinel)
 		ok.ErrorContains(tb, sentinel, "sentinel")
 		ok.Zero(tb, 0)
+		// The same calls carrying a message: annotate must stay off the
+		// passing path, and msgAndArgs must not escape at the call site.
+		ok.Equal(tb, 42, 42, "got %d, want %d", 42, 42)
+		ok.NotEqual(tb, 1, 2, "want anything but %d", 2)
+		ok.NoError(tb, nil, "loading %s", "config")
+		ok.MustNoError(tb, nil, "loading %s", "config")
+		ok.Error(tb, sentinel, "wanted %s", "failure")
+		ok.ErrorIs(tb, wrapped, sentinel, "in %s", "chain")
+		ok.ErrorContains(tb, sentinel, "sentinel", "in %s", "message")
+		ok.Zero(tb, 0, "want zero for %s", "counter")
 	})
 	if allocs != 0 {
 		t.Errorf("passing assertions allocated %v times per run, want 0", allocs)

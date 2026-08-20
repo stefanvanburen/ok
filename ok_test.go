@@ -129,6 +129,34 @@ func TestAssertions(t *testing.T) {
 		{"ErrorIs fail", func(tb ok.TB) bool {
 			return ok.ErrorIs(tb, errors.New("other"), errors.New("sentinel"))
 		}, []string{"got error other, want sentinel in its chain"}},
+		// msgAndArgs augment the got/want report rather than replacing it,
+		// unlike True, whose default message carries nothing worth keeping.
+		{"Equal fail with message", func(tb ok.TB) bool {
+			return ok.Equal(tb, 1, 2, "counting %s", "widgets")
+		}, []string{"got 1, want 2: counting widgets"}},
+		{"Equal pass with message", func(tb ok.TB) bool { return ok.Equal(tb, 1, 1, "counting %s", "widgets") }, nil},
+		{"NotEqual fail with message", func(tb ok.TB) bool {
+			return ok.NotEqual(tb, 3, 3, "still %s", "stuck")
+		}, []string{"got 3, want anything else: still stuck"}},
+		{"DeepEqual fail with message", func(tb ok.TB) bool {
+			return ok.DeepEqual(tb, []int{1}, []int{2}, "case %d", 7)
+		}, []string{"not deeply equal: case 7"}},
+		{"NoError fail with message", func(tb ok.TB) bool {
+			return ok.NoError(tb, errors.New("boom"), "loading %s", "config")
+		}, []string{"unexpected error: boom: loading config"}},
+		{"Error fail with message", func(tb ok.TB) bool {
+			return ok.Error(tb, nil, "parsing %s", "input")
+		}, []string{"got nil, want an error: parsing input"}},
+		{"Zero fail with message", func(tb ok.TB) bool {
+			return ok.Zero(tb, 7, "counter for %s", "run")
+		}, []string{"got 7, want zero value: counter for run"}},
+		{"ErrorContains fail with message", func(tb ok.TB) bool {
+			return ok.ErrorContains(tb, errors.New("boom"), "bang", "step %d", 2)
+		}, []string{`want it to contain "bang": step 2`}},
+		// A non-string first argument is ignored rather than panicking.
+		{"message ignored when not a format string", func(tb ok.TB) bool {
+			return ok.Equal(tb, 1, 2, 99)
+		}, []string{"got 1, want 2"}},
 		{"ErrorContains pass", func(tb ok.TB) bool {
 			return ok.ErrorContains(tb, errors.New("parse failed: bad token"), "bad token")
 		}, nil},
