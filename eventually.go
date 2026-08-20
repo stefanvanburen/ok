@@ -24,7 +24,7 @@ import (
 // Report failures inside attempt to its tb parameter, not the enclosing
 // test's: asserting against the enclosing *testing.T would report a failure
 // on every poll.
-func Eventually(tb TB, waitFor, tick time.Duration, attempt func(tb TB) bool) bool {
+func Eventually(tb TB, waitFor, tick time.Duration, attempt func(tb TB) bool, opts ...Option) bool {
 	tb.Helper()
 	satisfied, last := poll(tb, waitFor, tick, attempt)
 	if satisfied {
@@ -43,7 +43,7 @@ func Eventually(tb TB, waitFor, tick time.Duration, attempt func(tb TB) bool) bo
 // attempt runs immediately, a final attempt runs at the deadline, and
 // failures reported inside attempt are buffered, never surfaced: an attempt
 // is simply satisfied or not.
-func Never(tb TB, waitFor, tick time.Duration, attempt func(tb TB) bool) bool {
+func Never(tb TB, waitFor, tick time.Duration, attempt func(tb TB) bool, opts ...Option) bool {
 	tb.Helper()
 	if satisfied, _ := poll(tb, waitFor, tick, attempt); satisfied {
 		tb.Errorf("condition satisfied within %v, want never", waitFor)

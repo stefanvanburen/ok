@@ -59,35 +59,45 @@ user_test.go:21: not deeply equal:
 
 | Assertion | Checks |
 | --- | --- |
-| `Equal[T comparable](tb, got, want, msgAndArgs...)` | `got == want` |
-| `NotEqual[T comparable](tb, got, want, msgAndArgs...)` | `got != want` |
-| `DeepEqual[T any](tb, got, want, msgAndArgs...)` | `reflect.DeepEqual` |
+| `Equal[T comparable](tb, got, want, opts...)` | `got == want` |
+| `NotEqual[T comparable](tb, got, want, opts...)` | `got != want` |
+| `DeepEqual[T any](tb, got, want, opts...)` | `reflect.DeepEqual` |
 | `CmpEqual[T any](tb, got, want, opts...)` | `cmp.Equal` with [go-cmp] options |
-| `EqualFunc[T any](tb, got, want, equal, msgAndArgs...)` | `equal(got, want)` |
-| `True(tb, got, msgAndArgs...)` | `got`, with an optional formatted failure message |
-| `Panics(tb, f) (any, bool)` | `f` panics; returns the recovered value |
-| `NoError(tb, err, msgAndArgs...)` | `err == nil` |
-| `MustNoError(tb, err, msgAndArgs...)` | `err == nil`, halting the test otherwise |
-| `Error(tb, err, msgAndArgs...)` | `err != nil` |
-| `ErrorIs(tb, err, target, msgAndArgs...)` | `errors.Is` |
-| `ErrorAs[T error](tb, err) (T, bool)` | `errors.As`, returning the match |
-| `ErrorContains(tb, err, substr, msgAndArgs...)` | `err` is non-nil and its message contains `substr` |
-| `Zero[T comparable](tb, got, msgAndArgs...)` | `got` is the zero value |
-| `Eventually(tb, waitFor, tick, attempt)` | `attempt` returns true within `waitFor` |
+| `EqualFunc[T any](tb, got, want, equal, opts...)` | `equal(got, want)` |
+| `True(tb, got, opts...)` | `got` |
+| `Panics(tb, f, opts...) (any, bool)` | `f` panics; returns the recovered value |
+| `NoError(tb, err, opts...)` | `err == nil` |
+| `MustNoError(tb, err, opts...)` | `err == nil`, halting the test otherwise |
+| `Error(tb, err, opts...)` | `err != nil` |
+| `ErrorIs(tb, err, target, opts...)` | `errors.Is` |
+| `ErrorAs[T error](tb, err, opts...) (T, bool)` | `errors.As`, returning the match |
+| `ErrorContains(tb, err, substr, opts...)` | `err` is non-nil and its message contains `substr` |
+| `Zero[T comparable](tb, got, opts...)` | `got` is the zero value |
+| `Eventually(tb, waitFor, tick, attempt, opts...)` | `attempt` returns true within `waitFor` |
 | `Never(tb, waitFor, tick, attempt)` | `attempt` stays false throughout `waitFor` |
 
-Most assertions take optional `msgAndArgs` — a format string and its
-arguments — to add context to a failure:
+Every assertion but `CmpEqual` takes `Option` values that add context to a
+failure. `Sprintf` is the one that exists:
 
 ```go
-ok.Equal(t, len(matches), 2, "case-insensitive matches for %q", query)
-// got 3, want 2: case-insensitive matches for "Foo"
+ok.Equal(t, len(matches), 2, ok.Sprintf("matches for %q", query))
+// got 3, want 2: matches for "Foo"
 ```
 
-The message is appended to the got/want report. `True` is the exception:
-there the message *replaces* `got false, want true`, which carries nothing
-worth keeping. `CmpEqual` takes no message — its variadic slot holds cmp
-options.
+It is a type rather than a trailing format string and args — testify's
+`msgAndArgs` shape — for two reasons. A stray `ok.Equal(t, a, b, 99)` is a
+compile error instead of a silently dropped message. And because the
+format sits in a fixed position, `go vet` can check it:
+
+```console
+$ go vet -printf.funcs=Sprintf ./...
+x_test.go:10: ok.Sprintf format %d has arg "nope" of wrong type string
+```
+
+That flag is worth adding wherever you run vet; the check does not happen
+without it. The arguments are held rather than formatted until something
+actually fails, so a passing assertion still does not allocate.
+`CmpEqual` takes no option — its variadic slot holds cmp options.
 
 `Eventually` and `Never` poll a condition. Assertions can serve as the
 condition, since they return their result; failures inside an attempt are
@@ -104,7 +114,7 @@ ok.Eventually(t, 5*time.Second, 10*time.Millisecond, func(tb ok.TB) bool {
 
 Much of testify's surface is a stdlib call away. (testify takes
 `(t, expected, actual)`; ok takes `(tb, got, want)`.) The predicate checks
-pass a message so a failure shows the values, since `True` on its own
+pass an `ok.Sprintf` so a failure shows the values, since `True` on its own
 reports only `got false, want true`.
 
 | testify | with ok |
@@ -114,13 +124,13 @@ reports only `got false, want true`.
 | `assert.EqualValues(t, 3, count)` | `ok.Equal(t, int(count), 3)` |
 | `assert.Len(t, s, 2)` | `ok.Equal(t, len(s), 2)` |
 | `assert.Empty(t, s)` | `ok.Zero(t, len(s))` |
-| `assert.Contains(t, s, v)` | `ok.True(t, slices.Contains(s, v), "%v not in %v", v, s)` |
+| `assert.Contains(t, s, v)` | `ok.True(t, slices.Contains(s, v), ok.Sprintf("%v not in %v", v, s))` |
 | `assert.ElementsMatch(t, a, b)` | `ok.CmpEqual(t, a, b, cmpopts.SortSlices(less))` |
 | `assert.InDelta(t, want, got, 0.01)` | `ok.CmpEqual(t, got, want, cmpopts.EquateApprox(0, 0.01))` |
 | `assert.WithinDuration(t, a, b, d)` | `ok.CmpEqual(t, a, b, cmpopts.EquateApproxTime(d))` |
 | `assert.JSONEq(t, want, got)` | unmarshal both into `any`, then `ok.DeepEqual` |
-| `assert.Greater(t, a, b)` | `ok.True(t, a > b, "got %d, want > %d", a, b)` |
-| `assert.Regexp(t, re, s)` | `ok.True(t, regexp.MustCompile(re).MatchString(s), "%q does not match %s", s, re)` |
+| `assert.Greater(t, a, b)` | `ok.True(t, a > b, ok.Sprintf("got %d, want > %d", a, b))` |
+| `assert.Regexp(t, re, s)` | `ok.True(t, regexp.MustCompile(re).MatchString(s), ok.Sprintf("%q does not match %s", s, re))` |
 | `assert.ErrorContains(t, err, "x")` | `ok.ErrorContains(t, err, "x")` |
 | `assert.FileExists(t, p)` | `_, err := os.Stat(p); ok.NoError(t, err)` |
 | `assert.Panics(t, fn)` | `ok.Panics(t, fn)` |
