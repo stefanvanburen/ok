@@ -129,6 +129,20 @@ func TestAssertions(t *testing.T) {
 		{"ErrorIs fail", func(tb ok.TB) bool {
 			return ok.ErrorIs(tb, errors.New("other"), errors.New("sentinel"))
 		}, []string{"got error other, want sentinel in its chain"}},
+		{"ErrorContains pass", func(tb ok.TB) bool {
+			return ok.ErrorContains(tb, errors.New("parse failed: bad token"), "bad token")
+		}, nil},
+		{"ErrorContains fail", func(tb ok.TB) bool {
+			return ok.ErrorContains(tb, errors.New("boom"), "bang")
+		}, []string{`got error "boom", want it to contain "bang"`}},
+		// A nil error is a distinct failure from a mismatched message.
+		{"ErrorContains fail on nil", func(tb ok.TB) bool {
+			return ok.ErrorContains(tb, nil, "bang")
+		}, []string{`got nil, want an error containing "bang"`}},
+		// The message of a wrapped error includes its cause.
+		{"ErrorContains pass through wrapping", func(tb ok.TB) bool {
+			return ok.ErrorContains(tb, fmt.Errorf("context: %w", errors.New("root cause")), "root cause")
+		}, nil},
 		{"Zero pass", func(tb ok.TB) bool { return ok.Zero(tb, "") }, nil},
 		{"Zero fail", func(tb ok.TB) bool { return ok.Zero(tb, 7) }, []string{"got 7, want zero value"}},
 	}

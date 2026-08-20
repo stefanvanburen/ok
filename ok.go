@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -205,6 +206,26 @@ func ErrorAs[T error](tb TB, err error) (T, bool) {
 	}
 	tb.Errorf("got error %v, want %T in its chain", err, target)
 	return target, false
+}
+
+// ErrorContains asserts that err is non-nil and that its message contains
+// substr.
+//
+// Prefer [ErrorIs] or [ErrorAs] wherever the error offers a sentinel or a
+// type to match: message text is rarely part of an API's contract, so a
+// test that matches on it breaks when the wording is reworded. This is for
+// the errors that give you nothing else to match on.
+func ErrorContains(tb TB, err error, substr string) bool {
+	tb.Helper()
+	if err == nil {
+		tb.Errorf("got nil, want an error containing %q", substr)
+		return false
+	}
+	if msg := err.Error(); !strings.Contains(msg, substr) {
+		tb.Errorf("got error %q, want it to contain %q", msg, substr)
+		return false
+	}
+	return true
 }
 
 // Zero asserts that got is the zero value of its type.

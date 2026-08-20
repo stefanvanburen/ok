@@ -71,6 +71,7 @@ user_test.go:21: not deeply equal:
 | `Error(tb, err)` | `err != nil` |
 | `ErrorIs(tb, err, target)` | `errors.Is` |
 | `ErrorAs[T error](tb, err) (T, bool)` | `errors.As`, returning the match |
+| `ErrorContains(tb, err, substr)` | `err` is non-nil and its message contains `substr` |
 | `Zero[T comparable](tb, got)` | `got` is the zero value |
 | `Eventually(tb, waitFor, tick, attempt)` | `attempt` returns true within `waitFor` |
 | `Never(tb, waitFor, tick, attempt)` | `attempt` stays false throughout `waitFor` |
@@ -107,7 +108,7 @@ reports only `got false, want true`.
 | `assert.JSONEq(t, want, got)` | unmarshal both into `any`, then `ok.DeepEqual` |
 | `assert.Greater(t, a, b)` | `ok.True(t, a > b, "got %d, want > %d", a, b)` |
 | `assert.Regexp(t, re, s)` | `ok.True(t, regexp.MustCompile(re).MatchString(s), "%q does not match %s", s, re)` |
-| `assert.ErrorContains(t, err, "x")` | `ok.True(t, strings.Contains(err.Error(), "x"), "%q not in %v", "x", err)` |
+| `assert.ErrorContains(t, err, "x")` | `ok.ErrorContains(t, err, "x")` |
 | `assert.FileExists(t, p)` | `_, err := os.Stat(p); ok.NoError(t, err)` |
 | `assert.Panics(t, fn)` | `ok.Panics(t, fn)` |
 | `assert.PanicsWithValue(t, v, fn)` | `got, _ := ok.Panics(t, fn)`, then assert on `got` |
