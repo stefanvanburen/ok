@@ -7,8 +7,8 @@
 //		return
 //	}
 //
-// The exception is [MustNoError], which calls Fatalf: when a test can't
-// get a value it needs, there's rarely a point in continuing.
+// To stop at a failure instead, pass an assertion [Must](t), whose failures
+// call Fatalf; [MustNoError] does that for an error in one call.
 //
 // Every assertion but [CmpEqual], whose variadic slot belongs to cmp
 // options, takes [Option] values that add context to a failure. [Sprintf]
@@ -22,10 +22,11 @@
 // buried in a ...any. See [Sprintf].
 //
 // Equality on comparable types is checked with ==, and assertions that
-// pass do not allocate ([DeepEqual], [CmpEqual], and [ErrorAs] excepted;
-// they use reflection), whether or not they carry a message. [github.com/google/go-cmp/cmp] and
-// [github.com/stefanvanburen/colorcmp] run only after a failure, to
-// format the diff.
+// pass do not allocate, whether or not they carry a message: [DeepEqual],
+// [CmpEqual] and [ErrorAs] are the exceptions, as they use reflection, and
+// so are [Nil] and [NotNil] given a value that is not pointer-shaped.
+// [github.com/google/go-cmp/cmp] and [github.com/stefanvanburen/colorcmp]
+// run only after a failure, to format the diff.
 package ok
 
 import (

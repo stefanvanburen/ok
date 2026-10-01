@@ -31,8 +31,18 @@ if !ok.DeepEqual(t, got, want) {
 }
 ```
 
-The exception is `MustNoError`, which calls `Fatalf`: when a test can't get
-a value it needs, there's rarely a point in continuing.
+To stop at a failure instead, hand the assertion `ok.Must(t)`, a `TB` whose
+failures call `Fatalf`. Declare it once; which handle each assertion gets
+says where the test stops:
+
+```go
+must := ok.Must(t)
+ok.Len(must, rows, 3)       // stops here on failure
+ok.Equal(t, rows[0].ID, 1)  // reports and carries on
+```
+
+`MustNoError(t, err)` is `ok.NoError(ok.Must(t), err)` in one call: when a
+test can't get a value it needs, there's rarely a point in continuing.
 
 There are four equality assertions. `Equal` works on `comparable` types and
 uses `==`. `DeepEqual` uses `reflect.DeepEqual`. `CmpEqual` uses [go-cmp]
@@ -75,6 +85,14 @@ user_test.go:21: not deeply equal:
 | `Contains(tb, s, substr, opts...)` | `s` contains `substr` |
 | `NotContains(tb, s, substr, opts...)` | `s` does not contain `substr` |
 | `Zero[T comparable](tb, got, opts...)` | `got` is the zero value |
+| `Nil(tb, got, opts...)` | `got` is nil, an interface holding a nil pointer included |
+| `NotNil(tb, got, opts...)` | `got` is not nil |
+| `Len[S ~[]E, E any](tb, s, n, opts...)` | `len(s) == n`, showing `s` otherwise |
+| `Greater[T cmp.Ordered](tb, got, bound, opts...)` | `got > bound` |
+| `GreaterOrEqual[T cmp.Ordered](tb, got, bound, opts...)` | `got >= bound` |
+| `Less[T cmp.Ordered](tb, got, bound, opts...)` | `got < bound` |
+| `LessOrEqual[T cmp.Ordered](tb, got, bound, opts...)` | `got <= bound` |
+| `Must(tb) TB` | a `TB` that halts the test at its first failure |
 | `Eventually(tb, waitFor, tick, attempt, opts...)` | `attempt` returns true within `waitFor` |
 | `Never(tb, waitFor, tick, attempt)` | `attempt` stays false throughout `waitFor` |
 
@@ -122,9 +140,9 @@ reports only `got false, want true`.
 | testify | with ok |
 | --- | --- |
 | `assert.Same(t, want, got)` | `ok.Equal(t, got, want)` (`==` on pointers is identity) |
-| `assert.Nil(t, p)` | `ok.Equal(t, p, nil)` |
+| `assert.Nil(t, p)` | `ok.Nil(t, p)` |
 | `assert.EqualValues(t, 3, count)` | `ok.Equal(t, int(count), 3)` |
-| `assert.Len(t, s, 2)` | `ok.Equal(t, len(s), 2)` |
+| `assert.Len(t, s, 2)` | `ok.Len(t, s, 2)` (for maps, `ok.Equal(t, len(m), 2)`) |
 | `assert.Empty(t, s)` | `ok.Zero(t, len(s))` |
 | `assert.Contains(t, s, "x")` on a string | `ok.Contains(t, s, "x")` |
 | `assert.Contains(t, s, v)` on a slice | `ok.True(t, slices.Contains(s, v), ok.Sprintf("%v not in %v", v, s))` |
@@ -132,7 +150,7 @@ reports only `got false, want true`.
 | `assert.InDelta(t, want, got, 0.01)` | `ok.CmpEqual(t, got, want, cmpopts.EquateApprox(0, 0.01))` |
 | `assert.WithinDuration(t, a, b, d)` | `ok.CmpEqual(t, a, b, cmpopts.EquateApproxTime(d))` |
 | `assert.JSONEq(t, want, got)` | unmarshal both into `any`, then `ok.DeepEqual` |
-| `assert.Greater(t, a, b)` | `ok.True(t, a > b, ok.Sprintf("got %d, want > %d", a, b))` |
+| `assert.Greater(t, a, b)` | `ok.Greater(t, a, b)` |
 | `assert.Regexp(t, re, s)` | `ok.True(t, regexp.MustCompile(re).MatchString(s), ok.Sprintf("%q does not match %s", s, re))` |
 | `assert.ErrorContains(t, err, "x")` | `ok.ErrorContains(t, err, "x")` |
 | `assert.FileExists(t, p)` | `_, err := os.Stat(p); ok.NoError(t, err)` |
@@ -140,7 +158,7 @@ reports only `got false, want true`.
 | `assert.PanicsWithValue(t, v, fn)` | `got, _ := ok.Panics(t, fn)`, then assert on `got` |
 | `assert.Never(t, cond, wait, tick)` | `ok.Never(t, wait, tick, attempt)` |
 | `require.NoError(t, err)` | `ok.MustNoError(t, err)` |
-| other `require.*` | `if !ok.X(…) { return }` |
+| other `require.*` | `ok.X(must, …)` with `must := ok.Must(t)` |
 
 The JSONEq translation gets a diff into the JSON structure, rather than a
 dump of both documents:

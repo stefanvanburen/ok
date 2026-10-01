@@ -41,6 +41,13 @@ func TestPassingAssertionsDoNotAllocate(t *testing.T) {
 		ok.Contains(tb, "haystack", "hay")
 		ok.NotContains(tb, "haystack", "needle")
 		ok.Zero(tb, 0)
+		ok.Len(tb, []int{1, 2}, 2)
+		ok.Greater(tb, 2, 1)
+		ok.GreaterOrEqual(tb, 2, 2)
+		ok.Less(tb, 1, 2)
+		ok.LessOrEqual(tb, 2, 2)
+		ok.Nil(tb, (*int)(nil))
+		ok.NotNil(tb, sentinel)
 		// The same calls carrying a message: annotate must stay off the
 		// passing path, and msgAndArgs must not escape at the call site.
 		ok.Equal(tb, 42, 42, ok.Sprintf("got %d, want %d", 42, 42))
