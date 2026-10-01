@@ -72,6 +72,8 @@ user_test.go:21: not deeply equal:
 | `ErrorIs(tb, err, target, opts...)` | `errors.Is` |
 | `ErrorAs[T error](tb, err, opts...) (T, bool)` | `errors.As`, returning the match |
 | `ErrorContains(tb, err, substr, opts...)` | `err` is non-nil and its message contains `substr` |
+| `Contains(tb, s, substr, opts...)` | `s` contains `substr` |
+| `NotContains(tb, s, substr, opts...)` | `s` does not contain `substr` |
 | `Zero[T comparable](tb, got, opts...)` | `got` is the zero value |
 | `Eventually(tb, waitFor, tick, attempt, opts...)` | `attempt` returns true within `waitFor` |
 | `Never(tb, waitFor, tick, attempt)` | `attempt` stays false throughout `waitFor` |
@@ -124,7 +126,8 @@ reports only `got false, want true`.
 | `assert.EqualValues(t, 3, count)` | `ok.Equal(t, int(count), 3)` |
 | `assert.Len(t, s, 2)` | `ok.Equal(t, len(s), 2)` |
 | `assert.Empty(t, s)` | `ok.Zero(t, len(s))` |
-| `assert.Contains(t, s, v)` | `ok.True(t, slices.Contains(s, v), ok.Sprintf("%v not in %v", v, s))` |
+| `assert.Contains(t, s, "x")` on a string | `ok.Contains(t, s, "x")` |
+| `assert.Contains(t, s, v)` on a slice | `ok.True(t, slices.Contains(s, v), ok.Sprintf("%v not in %v", v, s))` |
 | `assert.ElementsMatch(t, a, b)` | `ok.CmpEqual(t, a, b, cmpopts.SortSlices(less))` |
 | `assert.InDelta(t, want, got, 0.01)` | `ok.CmpEqual(t, got, want, cmpopts.EquateApprox(0, 0.01))` |
 | `assert.WithinDuration(t, a, b, d)` | `ok.CmpEqual(t, a, b, cmpopts.EquateApproxTime(d))` |

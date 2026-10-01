@@ -38,6 +38,8 @@ func TestPassingAssertionsDoNotAllocate(t *testing.T) {
 		ok.Error(tb, sentinel)
 		ok.ErrorIs(tb, wrapped, sentinel)
 		ok.ErrorContains(tb, sentinel, "sentinel")
+		ok.Contains(tb, "haystack", "hay")
+		ok.NotContains(tb, "haystack", "needle")
 		ok.Zero(tb, 0)
 		// The same calls carrying a message: annotate must stay off the
 		// passing path, and msgAndArgs must not escape at the call site.
@@ -48,6 +50,8 @@ func TestPassingAssertionsDoNotAllocate(t *testing.T) {
 		ok.Error(tb, sentinel, ok.Sprintf("wanted %s", "failure"))
 		ok.ErrorIs(tb, wrapped, sentinel, ok.Sprintf("in %s", "chain"))
 		ok.ErrorContains(tb, sentinel, "sentinel", ok.Sprintf("in %s", "message"))
+		ok.Contains(tb, "haystack", "hay", ok.Sprintf("in %s", "message"))
+		ok.NotContains(tb, "haystack", "needle", ok.Sprintf("in %s", "message"))
 		ok.Zero(tb, 0, ok.Sprintf("want zero for %s", "counter"))
 	})
 	if allocs != 0 {

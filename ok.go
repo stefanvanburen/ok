@@ -224,6 +224,26 @@ func ErrorContains(tb TB, err error, substr string, opts ...Option) bool {
 	return true
 }
 
+// Contains asserts that s contains substr.
+func Contains(tb TB, s, substr string, opts ...Option) bool {
+	tb.Helper()
+	if strings.Contains(s, substr) {
+		return true
+	}
+	tb.Errorf("got %q, want it to contain %q%s", s, substr, annotate(opts))
+	return false
+}
+
+// NotContains asserts that s does not contain substr.
+func NotContains(tb TB, s, substr string, opts ...Option) bool {
+	tb.Helper()
+	if !strings.Contains(s, substr) {
+		return true
+	}
+	tb.Errorf("got %q, want it not to contain %q%s", s, substr, annotate(opts))
+	return false
+}
+
 // Zero asserts that got is the zero value of its type.
 func Zero[T comparable](tb TB, got T, opts ...Option) bool {
 	tb.Helper()

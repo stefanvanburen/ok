@@ -167,6 +167,17 @@ func TestAssertions(t *testing.T) {
 		{"ErrorContains pass through wrapping", func(tb ok.TB) bool {
 			return ok.ErrorContains(tb, fmt.Errorf("context: %w", errors.New("root cause")), "root cause")
 		}, nil},
+		{"Contains pass", func(tb ok.TB) bool { return ok.Contains(tb, "hello world", "lo w") }, nil},
+		{"Contains fail", func(tb ok.TB) bool {
+			return ok.Contains(tb, "hello", "bye")
+		}, []string{`got "hello", want it to contain "bye"`}},
+		{"Contains fail with message", func(tb ok.TB) bool {
+			return ok.Contains(tb, "hello", "bye", ok.Sprintf("greeting %d", 1))
+		}, []string{`want it to contain "bye": greeting 1`}},
+		{"NotContains pass", func(tb ok.TB) bool { return ok.NotContains(tb, "hello", "bye") }, nil},
+		{"NotContains fail", func(tb ok.TB) bool {
+			return ok.NotContains(tb, "hello world", "lo w")
+		}, []string{`got "hello world", want it not to contain "lo w"`}},
 		{"Zero pass", func(tb ok.TB) bool { return ok.Zero(tb, "") }, nil},
 		{"Zero fail", func(tb ok.TB) bool { return ok.Zero(tb, 7) }, []string{"got 7, want zero value"}},
 	}
